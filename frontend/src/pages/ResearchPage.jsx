@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { cleanReportText } from '../utils/reportCleaner';
+import { API_BASE_URL } from '../api';
 import {
   FileText,
   Loader2,
@@ -69,7 +70,7 @@ export default function ResearchPage({
     setCopied(false);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/research', {
+      const response = await fetch(`${API_BASE_URL}/api/research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, description, depth, language }),
@@ -82,6 +83,7 @@ export default function ResearchPage({
 
       const enriched = {
         ...data,
+        report: cleanReportText(data.report || ''),
         topic: data.topic || topic,
         depth,
         language,
@@ -95,19 +97,7 @@ export default function ResearchPage({
       setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
-    };
-
-    const cleanedReport = cleanReportText(data.report || '');
-
-const enriched = {
-  ...data,
-  report: cleanedReport,
-  topic: data.topic || topic,
-  depth,
-  language,
-  id: Date.now(),
-  createdAt: new Date().toLocaleString(),
-};
+    }
   };
 
   const handleCopy = async () => {
