@@ -1,44 +1,8 @@
-<<<<<<< HEAD
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/index.py"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
     }
   ]
 }
-=======
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "ai-engine": {
-      "root": "ai-engine",
-      "framework": "fastapi"
-    },
-    "frontend": {
-      "root": "frontend",
-      "framework": "vite"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": {
-        "service": "ai-engine"
-      }
-    },
-    {
-      "source": "/(.*)",
-      "destination": {
-        "service": "frontend"
-      }
-    }
-  ]
-}
->>>>>>> 047a3959c0b9355b877065c973518c8cbefaa588
