@@ -40,29 +40,30 @@ export function exportReportPDF(report) {
     }
   };
 
+  const title = (report.topic || 'AI Research Report').trim();
+  const cleanBody = cleanReportText(report.report || '')
+    .replace(/[#*`_>]/g, '')
+    .replace(/\n{3,}/g, '\n\n');
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
+  doc.setFontSize(17);
   doc.setTextColor(15, 23, 42);
-  const titleLines = doc.splitTextToSize(report.topic || 'AI Research Report', maxLineWidth);
+  const titleLines = doc.splitTextToSize(title, maxLineWidth);
   doc.text(titleLines, marginX, cursorY);
-  cursorY += titleLines.length * 24 + 14;
+  cursorY += titleLines.length * 22 + 12;
 
   doc.setDrawColor(203, 213, 225);
   doc.line(marginX, cursorY, pageWidth - marginX, cursorY);
-  cursorY += 20;
+  cursorY += 18;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(30, 41, 59);
 
-  const cleanBody = cleanReportText(report.report || '')
-    .replace(/[#*_`>-]/g, '')
-    .replace(/\n{3,}/g, '\n\n');
-
   const paragraphs = cleanBody.split('\n');
   paragraphs.forEach((para) => {
     if (!para.trim()) {
-      cursorY += 10;
+      cursorY += 8;
       return;
     }
     const wrapped = doc.splitTextToSize(para, maxLineWidth);
@@ -74,8 +75,6 @@ export function exportReportPDF(report) {
     cursorY += 4;
   });
 
-  const safeName = (report.topic || 'research_report')
-    .trim()
-    .replace(/[^a-zA-Z0-9]+/g, '_');
+  const safeName = title.replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, '_');
   doc.save(`${safeName || 'research_report'}.pdf`);
 }
