@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { cleanReportText } from '../utils/reportCleaner';
+import remarkGfm from 'remark-gfm';
+import { cleanReportText, validateReportPayload } from '../utils/reportCleaner';
 import { API_BASE_URL } from '../api';
 import {
   FileText,
@@ -81,10 +82,19 @@ export default function ResearchPage({
         throw new Error(data.detail || 'Failed to generate research report');
       }
 
+      const checked = validateReportPayload(data);
+      if (!checked.isComplete) {
+        throw new Error(
+          language === 'Arabic'
+            ? 'لم يكتمل نص التقرير من الخادم. يرجى إعادة المحاولة أو تقليل تعقيد الموضوع.'
+            : 'The report returned incomplete or empty content. Please try again.'
+        );
+      }
+
       const enriched = {
         ...data,
-        report: cleanReportText(data.report || ''),
-        topic: data.topic || topic,
+        report: checked.report,
+        topic: (data.topic || topic).trim(),
         depth,
         language,
         id: Date.now(),
@@ -102,9 +112,164 @@ export default function ResearchPage({
 
   const handleCopy = async () => {
     if (!result?.report) return;
-    await navigator.clipboard.writeText(`# ${result.topic}\n\n${result.report}`);
+    const cleanText = cleanReportText(result.report);
+    await navigator.clipboard.writeText(`# ${result.topic}\n\n${cleanText}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const isReportRtl =
+    result?.language === 'Arabic' ||
+    /[\u0600-\u06FF]/.test((result?.report || '').slice(0, 200));
+
+  const markdownComponents = {
+    h1: ({ children }) => (
+      <h1
+        className={`text-xl sm:text-2xl font-black mt-7 mb-3 pb-2 border-b ${
+          isDark
+            ? 'text-white border-slate-800'
+            : 'text-slate-900 border-slate-200'
+        }`}
+      >
+        {children}
+      </h1>
+    ),
+    h2: ({ children }) => (
+      <h2
+        className={`text-lg sm:text-xl font-extrabold mt-6 mb-2.5 ${
+          isDark ? 'text-cyan-300' : 'text-cyan-800'
+        }`}
+      >
+        {children}
+      </h2>
+    ),
+    h3: ({ children }) => (
+      <h3
+        className={`text-base sm:text-lg font-bold mt-5 mb-2 ${
+          isDark ? 'text-indigo-300' : 'text-indigo-700'
+        }`}
+      >
+        {children}
+      </h3>
+    ),
+    p: ({ children }) => (
+      <p
+        className={`text-sm sm:text-[15px] leading-[1.85] my-3 ${
+          isDark ? 'text-slate-200' : 'text-slate-800'
+        }`}
+      >
+        {children}
+      </p>
+    ),
+    ul: ({ children }) => (
+      <ul
+        className={`list-disc list-outside space-y-1.5 my-3 text-sm sm:text-[15px] leading-[1.75] ${
+          isReportRtl ? 'pr-5' : 'pl-5'
+        } ${isDark ? 'text-slate-200' : 'text-slate-800'}`}
+      >
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol
+        className={`list-decimal list-outside space-y-1.5 my-3 text-sm sm:text-[15px] leading-[1.75] ${
+          isReportRtl ? 'pr-5' : 'pl-5'
+        } ${isDark ? 'text-slate-200' : 'text-slate-800'}`}
+      >
+        {children}
+      </ol>
+    ),
+    table: ({ children }) => (
+      <div className="my-5 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <table className="w-full border-collapse text-xs sm:text-sm">
+          {children}
+        </table>
+      </div>
+    ),
+    thead: ({ children }) => (
+      <thead
+        className={
+          isDark
+            ? 'bg-slate-800/90 text-cyan-200'
+            : 'bg-slate-100 text-slate-900'
+        }
+      >
+        {children}
+      </thead>
+    ),
+    th: ({ children }) => (
+      <th
+        className={`px-3.5 py-2.5 font-bold border-b ${
+          isReportRtl ? 'text-right' : 'text-left'
+        } ${isDark ? 'border-slate-700' : 'border-slate-200'}`}
+      >
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td
+        className={`px-3.5 py-2.5 border-b align-top ${
+          isReportRtl ? 'text-right' : 'text-left'
+        } ${
+          isDark
+            ? 'border-slate-800/80 text-slate-300'
+            : 'border-slate-200/80 text-slate-700'
+        }`}
+      >
+        {children}
+      </td>
+    ),
+    blockquote: ({ children }) => (
+      <blockquote
+        className={`my-4 rounded-xl py-2.5 px-4 text-sm ${
+          isReportRtl ? 'border-r-4' : 'border-l-4'
+        } ${
+          isDark
+            ? 'border-cyan-400 bg-cyan-950/25 text-slate-200'
+            : 'border-cyan-600 bg-cyan-50/70 text-slate-800'
+        }`}
+      >
+        {children}
+      </blockquote>
+    ),
+    code: ({ inline, children }) =>
+      inline ? (
+        <code
+          dir="ltr"
+          className={`px-1.5 py-0.5 rounded-md font-mono text-xs ${
+            isDark
+              ? 'bg-slate-800 text-cyan-300'
+              : 'bg-slate-100 text-cyan-800'
+          }`}
+        >
+          {children}
+        </code>
+      ) : (
+        <pre
+          dir="ltr"
+          className={`my-4 p-4 rounded-xl overflow-x-auto text-xs font-mono leading-relaxed ${
+            isDark
+              ? 'bg-slate-950 border border-slate-800 text-slate-200'
+              : 'bg-slate-900 text-slate-100'
+          }`}
+        >
+          <code>{children}</code>
+        </pre>
+      ),
+    a: ({ href, children }) => (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className={`underline underline-offset-4 font-medium ${
+          isDark
+            ? 'text-cyan-300 hover:text-cyan-200'
+            : 'text-cyan-700 hover:text-cyan-900'
+        }`}
+      >
+        {children}
+      </a>
+    ),
   };
 
   const inputClass = `w-full border rounded-2xl px-4 py-3.5 text-sm focus:outline-none transition ${
@@ -447,7 +612,7 @@ export default function ResearchPage({
           )}
 
           <article
-            dir={result.language === 'Arabic' ? 'rtl' : 'ltr'}
+            dir={isReportRtl ? 'rtl' : 'ltr'}
             className={`${cardClass} p-5 sm:p-8 md:p-10`}
           >
             <div
@@ -474,12 +639,13 @@ export default function ResearchPage({
               </span>
             </div>
 
-            <div
-              className={`prose max-w-none leading-relaxed ${
-                isDark ? 'prose-invert text-slate-200' : 'text-slate-800'
-              }`}
-            >
-              <ReactMarkdown>{result.report || ''}</ReactMarkdown>
+            <div className="max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={markdownComponents}
+              >
+                {cleanReportText(result.report || '')}
+              </ReactMarkdown>
             </div>
           </article>
         </div>
